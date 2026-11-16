@@ -6,6 +6,9 @@
   <title>Wikitext Editor</title>
   <meta name="description" content="Edit MediaWiki .wiki files in the browser with a live article preview.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%2336c'/><text x='16' y='23' font-size='18' font-family='Georgia' text-anchor='middle' fill='white'>W</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tiro+Devanagari+Marathi:ital@0;1&display=swap">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -51,6 +54,11 @@
         <button data-cmd="template" title="Template">{{ }}</button>
         <button data-cmd="hr" title="Horizontal rule">―</button>
         <button data-cmd="nowiki" title="Escape markup">nowiki</button>
+        <div class="zoom" data-zoom-target="editor" role="group" aria-label="Editor text size">
+          <button data-zoom="-1" title="Smaller editor text">A−</button>
+          <button data-zoom="0" class="zoom-val" title="Reset editor text size">100%</button>
+          <button data-zoom="1" title="Larger editor text">A+</button>
+        </div>
       </div>
       <div class="editor-wrap">
         <textarea id="editor" spellcheck="true" placeholder="Type wikitext here, or drop a .wiki file…"></textarea>
@@ -69,7 +77,14 @@
     <div class="divider" id="divider" title="Drag to resize"></div>
 
     <section class="pane preview-pane">
-      <div class="preview-head">Preview</div>
+      <div class="preview-head">
+        <span>Preview</span>
+        <div class="zoom" data-zoom-target="preview" role="group" aria-label="Preview text size">
+          <button data-zoom="-1" title="Smaller preview text">A−</button>
+          <button data-zoom="0" class="zoom-val" title="Reset preview text size">100%</button>
+          <button data-zoom="1" title="Larger preview text">A+</button>
+        </div>
+      </div>
       <div class="preview-scroll" id="preview-scroll">
         <article class="wiki">
           <h1 class="wiki-title" id="wiki-title">Untitled</h1>

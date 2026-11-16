@@ -51,7 +51,7 @@
     clearTimeout(renderTimer);
     renderTimer = setTimeout(render, 120);
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => store.set({ name: filenameEl.value, text: editor.value }), 400);
+    saveTimer = setTimeout(saveState, 400);
   }
 
   function setDirty(v) {
@@ -69,13 +69,21 @@
   });
 
   // ---------- Loading files ----------
-  function loadText(text, name) {
+  // Text as it was when the file was opened; null for a new document with no source file.
+  let sourceText = null;
+
+  function saveState() {
+    store.set({ name: filenameEl.value, text: editor.value, source: sourceText });
+  }
+
+  function loadText(text, name, hasSource) {
     editor.value = text.replace(/\r\n?/g, '\n');
     filenameEl.value = name || 'untitled.wiki';
+    sourceText = hasSource === false ? null : editor.value;
     setDirty(false);
     dropzone.dataset.dismissed = '1';
     render();
-    store.set({ name: filenameEl.value, text: editor.value });
+    saveState();
     previewScroll.scrollTop = 0;
     editor.scrollTop = 0;
     editor.focus();
@@ -108,7 +116,7 @@
   $('btn-sample').onclick = () => { if (confirmDiscard()) loadText(SAMPLE, 'Sample_article.wiki'); };
   $('btn-new').onclick = () => {
     if (!confirmDiscard()) return;
-    loadText('', 'untitled.wiki');
+    loadText('', 'untitled.wiki', false);
     delete dropzone.dataset.dismissed;
     render();
   };
@@ -142,9 +150,28 @@
   });
 
   // ---------- Export ----------
-  function exportFile() {
+  const EDITED_RE = /_edited_\d{8}-\d{6}$/i;
+
+  function timestamp(d) {
+    const p = (n) => String(n).padStart(2, '0');
+    return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' +
+      p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
+  }
+
+  // "name.wiki" -> "name_edited_YYYYMMDD-HHMMSS.wiki" when the text differs from the opened file.
+  // An existing "_edited_<timestamp>" suffix is replaced, not stacked.
+  function exportName() {
     let name = filenameEl.value.trim() || 'untitled.wiki';
     if (!/\.[a-z0-9]+$/i.test(name)) name += '.wiki';
+    const changed = sourceText !== null && editor.value !== sourceText;
+    if (!changed) return name;
+    const dot = name.lastIndexOf('.');
+    const base = name.slice(0, dot).replace(EDITED_RE, '');
+    return base + '_edited_' + timestamp(new Date()) + name.slice(dot);
+  }
+
+  function exportFile() {
+    const name = exportName();
     const blob = new Blob([editor.value], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -314,6 +341,41 @@
     divider.addEventListener('pointerup', up);
   });
 
+  // ---------- Text size (editor and preview independently) ----------
+  const ZOOM_KEY = 'wikitext-editor:zoom';
+  const ZOOM_STEPS = [70, 80, 90, 100, 110, 125, 150, 175, 200];
+  const zoomTargets = {
+    editor: { el: editor, base: 13.5 },
+    preview: { el: document.querySelector('.wiki'), base: 14.5 }
+  };
+  let zoom = { editor: 100, preview: 100 };
+  try { Object.assign(zoom, JSON.parse(localStorage.getItem(ZOOM_KEY)) || {}); } catch (e) { /* ignore */ }
+
+  function applyZoom(name) {
+    const t = zoomTargets[name];
+    if (!ZOOM_STEPS.includes(zoom[name])) zoom[name] = 100;
+    t.el.style.fontSize = (t.base * zoom[name] / 100) + 'px';
+    const group = document.querySelector('.zoom[data-zoom-target="' + name + '"]');
+    group.querySelector('.zoom-val').textContent = zoom[name] + '%';
+    group.querySelector('[data-zoom="-1"]').disabled = zoom[name] === ZOOM_STEPS[0];
+    group.querySelector('[data-zoom="1"]').disabled = zoom[name] === ZOOM_STEPS[ZOOM_STEPS.length - 1];
+  }
+
+  document.querySelectorAll('.zoom').forEach((group) => {
+    const name = group.dataset.zoomTarget;
+    group.addEventListener('mousedown', (e) => e.preventDefault()); // keep editor selection
+    group.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-zoom]');
+      if (!btn) return;
+      const dir = +btn.dataset.zoom;
+      const i = ZOOM_STEPS.indexOf(zoom[name]);
+      zoom[name] = dir === 0 ? 100 : ZOOM_STEPS[Math.max(0, Math.min(ZOOM_STEPS.length - 1, i + dir))];
+      applyZoom(name);
+      try { localStorage.setItem(ZOOM_KEY, JSON.stringify(zoom)); } catch (err) { /* ignore */ }
+    });
+    applyZoom(name);
+  });
+
   // ---------- Help ----------
   const HELP = [
     ['Text', [
@@ -475,6 +537,7 @@ The project began as a simple way to clean up wiki exports.{{citation needed}} S
   if (saved && typeof saved.text === 'string') {
     editor.value = saved.text;
     filenameEl.value = saved.name || 'untitled.wiki';
+    sourceText = typeof saved.source === 'string' ? saved.source : null;
     if (saved.text) dropzone.dataset.dismissed = '1';
   }
   render();
