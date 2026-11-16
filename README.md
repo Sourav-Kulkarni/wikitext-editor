@@ -1,5 +1,7 @@
 # Wikitext Editor
 
+**Live demo:** https://sourav-kulkarni.github.io/wikitext-editor/
+
 A browser-based editor for MediaWiki `.wiki` files with a live, Wikipedia-style preview. It's a static site with no build step and no dependencies, and it runs on GitHub Pages as-is.
 
 ## Features
