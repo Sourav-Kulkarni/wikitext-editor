@@ -1,0 +1,7 @@
+# Local test material and tooling (not part of the editor)
+test_data/
+tools/
+
+__pycache__/
+.DS_Store
+Thumbs.db
